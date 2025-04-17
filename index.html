@@ -1,152 +1,111 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Balancer USDC ⇄ DAI Swap</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <style>
-    body { background-color: #0a1a3f; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 40px; }
-    input, button { padding: 10px; font-size: 16px; margin: 10px; border-radius: 6px; }
-    button { background-color: #1e3a8a; color: #fff; border: none; cursor: pointer; }
-    button:hover { background-color: #3b82f6; }
-    input { width: 180px; }
-  </style>
-</head>
-<body>
-  <h2>Balancer Swap: USDC ⇄ DAI</h2>
-  <button onclick="connectWallet()">Connect Wallet</button>
-  <p id="walletAddress">Wallet not connected</p>
+<!DOCTYPE html>  
+<html>  
+<head>  
+  <title>Balancer USDC ⇄ DAI Swap</title>  
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>  
+  <style>  
+    body { background-color: #0a1a3f; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 40px; }  
+    input, button { padding: 10px; font-size: 16px; margin: 10px; border-radius: 6px; }  
+    button { background-color: #1e3a8a; color: #fff; border: none; cursor: pointer; }  
+    button:hover { background-color: #3b82f6; }  
+    input { width: 180px; }  
+  </style>  
+</head>  
+<body>  
+  <h2>Balancer Swap: USDC ⇄ DAI</h2>  
+  <button onclick="connectWallet()">Connect Wallet</button>  
+  <p id="walletAddress">Wallet not connected</p>  
 
-  <div>
-    <p>USDC Balance: <span id="usdcBalance">-</span></p>
-    <p>DAI Balance: <span id="daiBalance">-</span></p>
-  </div>
+  <div>  
+    <p>USDC Balance: <span id="usdcBalance">-</span></p>  
+    <p>DAI Balance: <span id="daiBalance">-</span></p>  
+  </div>  
 
-  <div>
-    <h3>Swap USDC → DAI</h3>
-    <input type="number" step="0.0001" id="usdcInput" placeholder="Min 0.0001 USDC" />
-    <button onclick="swapUSDCtoDAI()">Swap to DAI</button>
-  </div>
+  <div>  
+    <h3>Swap USDC → DAI</h3>  
+    <input type="number" step="0.0001" id="usdcInput" placeholder="Min 0.0001 USDC" />  
+    <button onclick="swapUSDCtoDAI()">Swap to DAI</button>  
+  </div>  
 
-  <div>
-    <h3>Swap DAI → USDC</h3>
-    <input type="number" step="0.0001" id="daiInput" placeholder="Min 0.0001 DAI" />
-    <button onclick="swapDAItoUSDC()">Swap to USDC</button>
-  </div>
+  <div>  
+    <h3>Swap DAI → USDC</h3>  
+    <input type="number" step="0.0001" id="daiInput" placeholder="Min 0.0001 DAI" />  
+    <button onclick="swapDAItoUSDC()">Swap to USDC</button>  
+  </div>  
 
-  <script>
-    const usdcAddress   = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
-    const daiAddress    = "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063";
-    const balancerVault = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
-    const poolId        = "0x06df3b2bbb68adc8b0e302443692037ed9f91b42fbd4f7235f6c3e2cc2fdc6a5";
+  <script>  
+    const usdcAddress   = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";  
+    const daiAddress    = "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063";  
+    const balancerVault = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";  
+    const poolId        = "0x06df3b2bbb68adc8b0e302443692037ed9f91b42fbd4f7235f6c3e2cc2fdc6a5";  
 
-    const erc20Abi = [
-      "function balanceOf(address) view returns (uint256)",
-      "function approve(address spender, uint256 amount) returns (bool)"
-    ];
-    // Correct Vault.swap signature: SingleSwap, FundManagement, limit, deadline
-    const vaultAbi = [
-      "function swap((bytes32,uint8,address,address,uint256,bytes),(address,bool,address,bool),uint256,uint256) returns (uint256)"
-    ];
+    const erc20Abi = [  
+      "function balanceOf(address) view returns (uint256)",  
+      "function approve(address spender, uint256 amount) returns (bool)"  
+    ];  
+    const vaultAbi = [  
+      "function swap((bytes32,uint8,address,address,uint256,bytes),(address,bool,address,bool),uint256,uint256) returns (uint256)"  
+    ];  
 
-    let provider, signer, userAddress;
+    let provider, signer, userAddress;  
 
-    async function connectWallet() {
-      if (!window.ethereum) return alert("MetaMask not detected!");
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer      = provider.getSigner();
-      userAddress = await signer.getAddress();
-      document.getElementById("walletAddress").innerText = "Connected: " + userAddress;
-      await getBalances();
-    }
+    async function connectWallet() {  
+      if (!window.ethereum) return alert("MetaMask not detected!");  
+      provider = new ethers.providers.Web3Provider(window.ethereum);  
+      await provider.send("eth_requestAccounts", []);  
+      signer      = provider.getSigner();  
+      userAddress = await signer.getAddress();  
+      document.getElementById("walletAddress").innerText = "Connected: " + userAddress;  
+      await getBalances();  
+    }  
 
-    async function getBalances() {
-      if (!provider || !userAddress) return;
-      const usdc = new ethers.Contract(usdcAddress, erc20Abi, provider);
-      const dai  = new ethers.Contract(daiAddress,  erc20Abi, provider);
-      const [u, d] = await Promise.all([
-        usdc.balanceOf(userAddress),
-        dai.balanceOf(userAddress)
-      ]);
-      document.getElementById("usdcBalance").innerText = (u / 1e6).toFixed(4);
-      document.getElementById("daiBalance").innerText  = (d / 1e18).toFixed(4);
-    }
+    async function getBalances() {  
+      if (!provider || !userAddress) return;  
+      const usdc = new ethers.Contract(usdcAddress, erc20Abi, provider);  
+      const dai  = new ethers.Contract(daiAddress,  erc20Abi, provider);  
+      const [u, d] = await Promise.all([  
+        usdc.balanceOf(userAddress),  
+        dai.balanceOf(userAddress)  
+      ]);  
+      document.getElementById("usdcBalance").innerText = (u / 1e6).toFixed(4);  
+      document.getElementById("daiBalance").innerText  = (d / 1e18).toFixed(4);  
+    }  
 
-    async function swapUSDCtoDAI() {
-      if (!signer) return alert("Please connect your wallet first.");
-      userAddress = await signer.getAddress();  // refresh
-      const input = document.getElementById("usdcInput").value;
-      if (!input || parseFloat(input) < 0.0001) return alert("Enter ≥0.0001 USDC");
+    async function swapUSDCtoDAI() {  
+      if (!signer) return alert("Please connect your wallet first.");  
+      userAddress = await signer.getAddress();  // refresh  
+      const input = document.getElementById("usdcInput").value;  
+      if (!input || parseFloat(input) < 0.0001) return alert("Enter ≥0.0001 USDC");  
 
-      const amountIn = ethers.utils.parseUnits(input, 6);
-      // Approve USDC → Vault
-      const usdc = new ethers.Contract(usdcAddress, erc20Abi, signer);
-      await (await usdc.approve(balancerVault, amountIn)).wait();
+      const amountIn = ethers.utils.parseUnits(input, 6);  
+      const usdc = new ethers.Contract(usdcAddress, erc20Abi, signer);  
+      
+      try {  
+        const allowance = await usdc.allowance(userAddress, balancerVault);  
+        if (allowance < amountIn) {  
+          console.log("Approving USDC for the vault...");  
+          const approvalTx = await usdc.approve(balancerVault, amountIn);  
+          await approvalTx.wait();  
+        }  
 
-      const vault = new ethers.Contract(balancerVault, vaultAbi, signer);
-      const singleSwap = {
-        poolId:   poolId,
-        kind:     0,               // GIVEN_IN
-        assetIn:  usdcAddress,
-        assetOut: daiAddress,
-        amount:   amountIn,
-        userData: "0x"
-      };
-      const funds = {
-        sender:             userAddress,
-        fromInternalBalance:false,
-        recipient:          userAddress,
-        toInternalBalance:  false
-      };
-      console.log("singleSwap:", singleSwap, "funds:", funds, "limit:", amountIn);
-      try {
-        const tx = await vault.swap(singleSwap, funds, amountIn, Math.floor(Date.now()/1000)+60);
-        await tx.wait();
-        await getBalances();
-        alert("✅ USDC→DAI swap complete");
-      } catch (err) {
-        console.error("Swap error:", err);
-        alert("Swap failed: " + (err.reason||err.message));
-      }
-    }
-
-    async function swapDAItoUSDC() {
-      if (!signer) return alert("Please connect your wallet first.");
-      userAddress = await signer.getAddress();  // refresh
-      const input = document.getElementById("daiInput").value;
-      if (!input || parseFloat(input) < 0.0001) return alert("Enter ≥0.0001 DAI");
-
-      const amountIn = ethers.utils.parseUnits(input, 18);
-      // Approve DAI → Vault
-      const dai = new ethers.Contract(daiAddress, erc20Abi, signer);
-      await (await dai.approve(balancerVault, amountIn)).wait();
-
-      const vault = new ethers.Contract(balancerVault, vaultAbi, signer);
-      const singleSwap = {
-        poolId:   poolId,
-        kind:     0,               // GIVEN_IN
-        assetIn:  daiAddress,
-        assetOut: usdcAddress,
-        amount:   amountIn,
-        userData: "0x"
-      };
-      const funds = {
-        sender:             userAddress,
-        fromInternalBalance:false,
-        recipient:          userAddress,
-        toInternalBalance:  false
-      };
-      console.log("singleSwap:", singleSwap, "funds:", funds, "limit:", amountIn);
-      try {
-        const tx = await vault.swap(singleSwap, funds, amountIn, Math.floor(Date.now()/1000)+60);
-        await tx.wait();
-        await getBalances();
-        alert("✅ DAI→USDC swap complete");
-      } catch (err) {
-        console.error("Swap error:", err);
-        alert("Swap failed: " + (err.reason||err.message));
-      }
-    }
-  </script>
-</body>
-</html>
+        const vault = new ethers.Contract(balancerVault, vaultAbi, signer);  
+        const singleSwap = {  
+          poolId:   poolId,  
+          kind:     0,               // GIVEN_IN  
+          assetIn:  usdcAddress,  
+          assetOut: daiAddress,  
+          amount:   amountIn,  
+          userData: "0x"  
+        };  
+        const funds = {  
+          sender:             userAddress,  
+          fromInternalBalance: false,  
+          recipient:          userAddress,  
+          toInternalBalance:  false  
+        };  
+        console.log("singleSwap:", singleSwap, "funds:", funds, "limit:", amountIn);  
+        
+        const tx = await vault.swap(singleSwap, funds, amountIn, Math.floor(Date.now()/1000)+60);  
+        await tx.wait();  
+        await getBalances();  
+        alert
