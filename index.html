@@ -1,122 +1,132 @@
 <!DOCTYPE html>  
 <html>  
 <head>  
-  <title>Balancer USDC ⇄ DAI Swap</title>  
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>  
-  <style>  
-    body { background-color: #4caf50; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 40px; }  
-    input, button { padding: 10px; font-size: 16px; margin: 10px; border-radius: 6px; }  
-    button { background-color: #1e3a8a; color: #fff; border: none; cursor: pointer; }  
-    button:hover { background-color: #3b82f6; }  
-    input { width: 180px; }  
-    button:disabled { background-color: #4a90e2; cursor: not-allowed; }  
-  </style>  
+    <title>Balancer USDC ⇄ DAI Swap</title>  
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>  
+    <style>  
+        body { background-color: #4caf50; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 40px; }  
+        input, button { padding: 10px; font-size: 16px; margin: 10px; border-radius: 6px; }  
+        button { background-color: #1e3a8a; color: #fff; border: none; cursor: pointer; }  
+        button:hover { background-color: #3b82f6; }  
+        input { width: 180px; }  
+        button:disabled { background-color: #4a90e2; cursor: not-allowed; }  
+    </style>  
 </head>  
 <body>  
-  <h2>Balancer Swap: USDC ⇄ DAI</h2>  
-  <button id="connectButton" onclick="connectWallet()">Connect Wallet</button>  
-  <p id="walletAddress">Wallet not connected</p>  
+    <h2>Balancer Swap: USDC ⇄ DAI</h2>  
+    <button id="connectButton" onclick="connectWallet()">Connect Wallet</button>  
+    <p id="walletAddress">Wallet not connected</p>  
 
-  <div>  
-    <p>USDC Balance: <span id="usdcBalance">-</span></p>  
-    <p>DAI Balance: <span id="daiBalance">-</span></p>  
-  </div>  
+    <div>  
+        <p>USDC Balance: <span id="usdcBalance">-</span></p>  
+        <p>DAI Balance: <span id="daiBalance">-</span></p>  
+    </div>  
 
-  <div>  
-    <h3>Swap USDC → DAI</h3>  
-    <input type="number" step="0.0001" id="usdcInput" placeholder="Min 0.0001 USDC" />  
-    <button id="swapUsdcToDaiButton" onclick="swapTokens(usdcAddress, daiAddress)">Swap to DAI</button>  
-  </div>  
+    <div>  
+        <h3>Swap USDC → DAI</h3>  
+        <input type="number" step="0.0001" id="usdcInput" placeholder="Min 0.0001 USDC" />  
+        <button onclick="swapTokens(usdcAddress, daiAddress)">Swap to DAI</button>  
+    </div>  
 
-  <div>  
-    <h3>Swap DAI → USDC</h3>  
-    <input type="number" step="0.0001" id="daiInput" placeholder="Min 0.0001 DAI" />  
-    <button id="swapDaiToUsdcButton" onclick="swapTokens(daiAddress, usdcAddress)">Swap to USDC</button>  
-  </div>  
+    <div>  
+        <h3>Swap DAI → USDC</h3>  
+        <input type="number" step="0.0001" id="daiInput" placeholder="Min 0.0001 DAI" />  
+        <button onclick="swapTokens(daiAddress, usdcAddress)">Swap to USDC</button>  
+    </div>  
 
-  <script>  
-    const usdcAddress   = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"; // Replace with actual address  
-    const daiAddress    = "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063"; // Replace with actual address  
-    const balancerVault = "0xBA12222222228d8Ba445958a75a0704d566BF2C8"; // Replace with actual address  
-    const poolId        = "0x06df3b2bbb68adc8b0e302443692037ed9f91b42fbd4f7235f6c3e2cc2fdc6a5"; // Replace with actual ID  
+    <script>  
+        const usdcAddress   = "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"; // USDC Mainnet  
+        const daiAddress    = "0x6B175474E89094C44Da98b954EedeAC495271d0F"; // DAI Mainnet  
+        const balancerVault = "0xBA12222222228d8Ba445958a75a0704d566BF2C8"; // Replace with actual address  
+        const poolId        = "POOL_ID"; // Replace with actual pool ID  
 
-    const erc20Abi = [  
-      "function balanceOf(address) view returns (uint256)",  
-      "function approve(address spender, uint256 amount) returns (bool)",  
-      "function allowance(address owner, address spender) view returns (uint256)"  
-    ];  
+        const erc20Abi = [  
+            "function balanceOf(address) view returns (uint256)",  
+            "function approve(address spender, uint256 amount) returns (bool)",  
+            "function allowance(address owner, address spender) view returns (uint256)"  
+        ];  
 
-    const vaultAbi = [  
-      "function swap((bytes32,uint8,address,address,uint256,bytes),(address,bool,address,bool),uint256,uint256) returns (uint256)"  
-    ];  
+        const vaultAbi = [  
+            "function swap((bytes32,uint8,address,address,uint256,bytes),(address,bool,address,bool),uint256,uint256) returns (uint256)"  
+        ];  
 
-    let provider, signer, userAddress;  
+        let provider, signer, userAddress;  
 
-    async function connectWallet() {  
-      if (!window.ethereum) return alert("MetaMask not detected!");  
-      provider = new ethers.providers.Web3Provider(window.ethereum);  
-      await provider.send("eth_requestAccounts", []);  
-      signer = provider.getSigner();  
-      userAddress = await signer.getAddress();  
-      document.getElementById("walletAddress").innerText = "Connected: " + userAddress;  
-      await getBalances();  
-      document.getElementById("connectButton").disabled = true; // Disable button after connection  
-    }  
-
-    async function getBalances() {  
-      if (!provider || !userAddress) return;  
-      const usdc = new ethers.Contract(usdcAddress, erc20Abi, provider);  
-      const dai  = new ethers.Contract(daiAddress, erc20Abi, provider);  
-      const [u, d] = await Promise.all([  
-        usdc.balanceOf(userAddress),  
-        dai.balanceOf(userAddress)  
-      ]);  
-      document.getElementById("usdcBalance").innerText = (u / 1e6).toFixed(4);  
-      document.getElementById("daiBalance").innerText  = (d / 1e18).toFixed(4);  
-    }  
-
-    async function swapTokens(inputToken, outputToken) {  
-      const inputValue = document.getElementById(`${inputToken === usdcAddress ? 'usdcInput' : 'daiInput'}`).value;  
-      if (!inputValue || parseFloat(inputValue) < 0.0001) return alert(`Enter ≥0.0001 for ${inputToken === usdcAddress ? 'USDC' : 'DAI'}`);  
-
-      const amountIn = ethers.utils.parseUnits(inputValue, inputToken === usdcAddress ? 6 : 18);  
-      const tokenContract = new ethers.Contract(inputToken, erc20Abi, signer);  
-      
-      try {  
-        const allowance = await tokenContract.allowance(userAddress, balancerVault);  
-        if (allowance.lt(amountIn)) {  
-          console.log("Approving token for the vault...");  
-          const approvalTx = await tokenContract.approve(balancerVault, amountIn);  
-          await approvalTx.wait();  
-          alert(`Approved ${inputToken === usdcAddress ? 'USDC' : 'DAI'} for swap.`);  
+        async function connectWallet() {  
+            if (!window.ethereum) return alert("MetaMask not detected!");  
+            provider = new ethers.providers.Web3Provider(window.ethereum);  
+            await provider.send("eth_requestAccounts", []);  
+            signer = provider.getSigner();  
+            userAddress = await signer.getAddress();  
+            document.getElementById("walletAddress").innerText = "Connected: " + userAddress;  
+            await getBalances();  
+            document.getElementById("connectButton").disabled = true;  
         }  
 
-        const vault = new ethers.Contract(balancerVault, vaultAbi, signer);  
-        const singleSwap = {  
-          poolId: poolId,  
-          kind: 0, // GIVEN_IN  
-          assetIn: inputToken,  
-          assetOut: outputToken,  
-          amount: amountIn,  
-          userData: "0x"  
-        };  
-        
-        const funds = {  
-          sender: userAddress,  
-          fromInternalBalance: false,  
-          recipient: userAddress,  
-          toInternalBalance: false  
-        };  
+        async function getBalances() {  
+            if (!provider || !userAddress) return;  
+            const usdc = new ethers.Contract(usdcAddress, erc20Abi, provider);  
+            const dai  = new ethers.Contract(daiAddress, erc20Abi, provider);  
+            const [u, d] = await Promise.all([  
+                usdc.balanceOf(userAddress),  
+                dai.balanceOf(userAddress)  
+            ]);  
+            document.getElementById("usdcBalance").innerText = (u / 1e6).toFixed(4);  
+            document.getElementById("daiBalance").innerText  = (d / 1e18).toFixed(4);  
+        }  
 
-        const tx = await vault.swap(singleSwap, funds, amountIn, Math.floor(Date.now() / 1000) + 60);  
-        await tx.wait();  
-        await getBalances();  
-        alert(`${inputToken === usdcAddress ? 'USDC → DAI' : 'DAI → USDC'} swap complete!`);  
-      } catch (err) {  
-        console.error("Swap error:", err);  
-        alert("Swap failed: " + (err.reason || err.message));  
-      }  
-    }  
-  </script>  
+        async function swapTokens(inputToken, outputToken) {  
+            try {  
+                const inputField = inputToken === usdcAddress ? "usdcInput" : "daiInput";  
+                const inputValue = document.getElementById(inputField).value;  
+                if (!inputValue || parseFloat(inputValue) < 0.0001) {  
+                    return alert(`Enter ≥0.0001 for ${inputToken === usdcAddress ? "USDC" : "DAI"}`);  
+                }  
+
+                const amountIn = ethers.utils.parseUnits(inputValue, inputToken === usdcAddress ? 6 : 18);  
+                const tokenContract = new ethers.Contract(inputToken, erc20Abi, signer);  
+
+                // Log used addresses  
+                console.log("Input Token:", inputToken);  
+                console.log("Output Token:", outputToken);  
+                console.log("Vault Address:", balancerVault);  
+
+                const allowance = await tokenContract.allowance(userAddress, balancerVault);  
+                if (allowance.lt(amountIn)) {  
+                    console.log("Approving token for the vault...");  
+                    const approvalTx = await tokenContract.approve(balancerVault, amountIn);  
+                    await approvalTx.wait();  
+                    alert(`Approved ${inputToken === usdcAddress ? "USDC" : "DAI"} for swap.`);  
+                }  
+
+                const vault = new ethers.Contract(balancerVault, vaultAbi, signer);  
+                const singleSwap = {  
+                    poolId: poolId,  
+                    kind: 0, // GIVEN_IN  
+                    assetIn: inputToken,  
+                    assetOut: outputToken,  
+                    amount: amountIn,  
+                    userData: "0x"  
+                };  
+
+                const funds = {  
+                    sender: userAddress,  
+                    fromInternalBalance: false,  
+                    recipient: userAddress,  
+                    toInternalBalance: false  
+                };  
+
+                const tx = await vault.swap(singleSwap, funds, amountIn, Math.floor(Date.now() / 1000) + 60);  
+                await tx.wait();  
+                await getBalances();  
+                alert(`${inputToken === usdcAddress ? "USDC → DAI" : "DAI → USDC"} swap complete!`);  
+
+            } catch (err) {  
+                console.error("Swap error:", err);  
+                alert("Swap failed: " + (err.reason || err.message));  
+            }  
+        }  
+    </script>  
 </body>  
 </html>
+   
